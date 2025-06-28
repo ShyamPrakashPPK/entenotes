@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '@/app/store/auth';
 
-const API_URL = 'http://localhost:3052/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const axiosInstance = axios.create({
     baseURL: API_URL,
@@ -14,7 +14,7 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
-        console.log(token," asdflkasdjflksdajf");
+        console.log(token, " asdflkasdjflksdajf");
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }

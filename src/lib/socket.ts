@@ -5,10 +5,11 @@ let socket: Socket | null = null;
 export const getSocket = () => {
     if (!socket) {
         const token = localStorage.getItem('token');
+        const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
 
         console.log('Initializing socket connection with token:', token ? 'present' : 'missing');
 
-        socket = io('ws://localhost:3052', {
+        socket = io(WS_URL, {
             auth: {
                 token
             },

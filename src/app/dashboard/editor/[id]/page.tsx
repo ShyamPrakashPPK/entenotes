@@ -8,6 +8,7 @@ import SaveIndicator from '@/components/ui/SaveIndicator';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
 import { Editor } from '@/components/ui/Editor';
 import axiosInstance from '@/lib/axios';
+
 interface User {
     id: string;
     username: string;
@@ -41,9 +42,9 @@ export default function EditorPage() {
             if (!token || !id) return;
             try {
                 const response = await axiosInstance.get<Note>(`/notes/${id}`);
-                console.log(response, "response");
-                setNote(response as unknown as Note);
-                setContent((response as unknown as Note).content || '');
+                const noteData = response as unknown as Note;
+                setNote(noteData);
+                setContent(noteData.content || '');
             } catch (err) {
                 setError('Failed to load note');
                 console.error('Fetch error:', err);
@@ -103,17 +104,9 @@ export default function EditorPage() {
         setIsSaving(true);
         saveTimeout = setTimeout(async () => {
             try {
-                const response = await fetch(`http://localhost:3052/api/notes/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ content: newContent })
+                await axiosInstance.put(`/notes/${id}`, {
+                    content: newContent
                 });
-
-                if (!response.ok) throw new Error('Failed to save');
-
             } catch (err) {
                 console.error('Save error:', err);
                 setError('Failed to save changes');
