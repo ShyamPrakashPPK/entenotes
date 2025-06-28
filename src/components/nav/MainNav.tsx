@@ -19,7 +19,7 @@ export default function MainNav() {
     };
 
     return (
-        <header className="z-50 bg-[#151415] bg-opacity-70 backdrop-blur-sm">
+        <header className=" bg-[#151415] bg-opacity-70 backdrop-blur-sm">
             <nav className="container mx-auto flex items-center justify-between p-6 lg:px-8" aria-label="Global">
                 <div className="flex-shrink-0">
                     <Link href="/">
@@ -31,17 +31,14 @@ export default function MainNav() {
 
                 <MobileNav isLoggedIn={isAuthenticated} onLogout={handleLogout} />
 
-                <div className="hidden lg:flex lg:gap-x-12">
+                <div className="hidden lg:flex lg:gap-x-12 absolute left-1/2 transform -translate-x-1/2">
                     {isAuthenticated ? (
                         <>
                             <Link href="/dashboard" className="text-sm font-semibold text-white hover:text-gray-300">
                                 Dashboard
                             </Link>
-                            <Link href="/simple" className="text-sm font-semibold text-white hover:text-gray-300">
-                                Simple Notes
-                            </Link>
-                            <Link href="/test" className="text-sm font-semibold text-white hover:text-gray-300">
-                                Test Editor
+                            <Link href="/about" className="text-sm font-semibold text-white hover:text-gray-300">
+                                About
                             </Link>
                         </>
                     ) : (
@@ -49,9 +46,7 @@ export default function MainNav() {
                             <Link href="/features" className="text-sm font-semibold text-white hover:text-gray-300">
                                 Features
                             </Link>
-                            <Link href="/pricing" className="text-sm font-semibold text-white hover:text-gray-300">
-                                Pricing
-                            </Link>
+                         
                             <Link href="/about" className="text-sm font-semibold text-white hover:text-gray-300">
                                 About
                             </Link>

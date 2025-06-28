@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../store/auth';
-import Sidebar from '../../components/nav/sidebar';
 import { showToast } from '@/components/ui/Toast';
 
 export default function DashboardLayout({
@@ -34,7 +33,6 @@ export default function DashboardLayout({
 
     return (
         <div className="flex min-h-screen">
-            <Sidebar />
             <main className="flex-1 overflow-auto">
                 {children}
             </main>
