@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
 import { authAPI } from '@/lib/api';
+import { showToast } from '@/components/ui/Toast';
+import { registerSchema, type RegisterInput } from '@/app/utils/validation';
 
 export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
@@ -14,27 +16,42 @@ export default function RegisterPage() {
         password: '',
         confirmPassword: ''
     });
+    const [errors, setErrors] = useState<Partial<RegisterInput>>({});
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (formData.password !== formData.confirmPassword) {
-            alert('Passwords do not match!');
-            return;
-        }
-
-        const payload = {
-            username: formData.username,
-            email: formData.email,
-            password: formData.password
-        };
-
         try {
+            // Clear previous errors
+            setErrors({});
+
+            // Validate form data
+            const validatedData = registerSchema.safeParse(formData);
+
+            if (!validatedData.success) {
+                // Handle Zod validation errors
+                const validationErrors: Partial<RegisterInput> = {};
+                validatedData.error.errors.forEach((err) => {
+                    const path = err.path[0];
+                    validationErrors[path as keyof RegisterInput] = err.message;
+                });
+                setErrors(validationErrors);
+                showToast('Please fix the form errors', 'error');
+                return;
+            }
+
+            const payload = {
+                username: validatedData.data.username,
+                email: validatedData.data.email,
+                password: validatedData.data.password
+            };
+
             await authAPI.register(payload);
-            alert('Registration successful. Please login.');
+            showToast('Registration successful. Please login.', 'success');
             router.push('/login');
         } catch (error: any) {
-            alert(error.message || 'Registration failed');
+            const errorMessage = error.response?.data?.message || 'Registration failed';
+            showToast(errorMessage, 'error');
         }
     };
 
@@ -45,43 +62,64 @@ export default function RegisterPage() {
                 <div className="mx-auto">
                     <div className="max-w-md mx-auto px-8 py-6 bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg">
                         <h2 className="text-2xl font-semibold text-white mb-4">Create Account</h2>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleSubmit} noValidate>
                             <div className="mb-4">
                                 <label className="block text-white mb-1" htmlFor="username">Username</label>
                                 <input
-                                    className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300"
+                                    className={`w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 ${errors.username ? 'ring-2 ring-red-500' : 'focus:ring-blue-500'} transition duration-300`}
                                     placeholder="Enter your username"
                                     type="text"
                                     id="username"
                                     value={formData.username}
-                                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                    required
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, username: e.target.value });
+                                        if (errors.username) {
+                                            setErrors(prev => ({ ...prev, username: undefined }));
+                                        }
+                                    }}
                                 />
+                                {errors.username && (
+                                    <p className="mt-1 text-sm text-red-500">{errors.username}</p>
+                                )}
                             </div>
                             <div className="mb-4">
                                 <label className="block text-white mb-1" htmlFor="email">Email Address</label>
                                 <input
-                                    className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300"
+                                    className={`w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 ${errors.email ? 'ring-2 ring-red-500' : 'focus:ring-blue-500'} transition duration-300`}
                                     placeholder="Enter your email"
                                     type="email"
                                     id="email"
                                     value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    required
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, email: e.target.value });
+                                        if (errors.email) {
+                                            setErrors(prev => ({ ...prev, email: undefined }));
+                                        }
+                                    }}
                                 />
+                                {errors.email && (
+                                    <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                                )}
                             </div>
                             <div className="mb-4">
                                 <label className="block text-white mb-1" htmlFor="password">Password</label>
                                 <div className="relative">
                                     <input
-                                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300"
+                                        className={`w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 ${errors.password ? 'ring-2 ring-red-500' : 'focus:ring-blue-500'} transition duration-300`}
                                         placeholder="Enter your password"
                                         type={showPassword ? "text" : "password"}
                                         id="password"
                                         value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        required
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, password: e.target.value });
+                                            if (errors.password) {
+                                                setErrors(prev => ({ ...prev, password: undefined }));
+                                            }
+                                        }}
                                     />
+                                    {errors.password && (
+                                        <p className="mt-1 text-sm text-red-500">{errors.password}</p>
+                                    )}
                                     <button
                                         type="button"
                                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
@@ -104,14 +142,21 @@ export default function RegisterPage() {
                                 <label className="block text-white mb-1" htmlFor="confirmPassword">Confirm Password</label>
                                 <div className="relative">
                                     <input
-                                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300"
+                                        className={`w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 ${errors.confirmPassword ? 'ring-2 ring-red-500' : 'focus:ring-blue-500'} transition duration-300`}
                                         placeholder="Confirm your password"
                                         type={showConfirmPassword ? "text" : "password"}
                                         id="confirmPassword"
                                         value={formData.confirmPassword}
-                                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                        required
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, confirmPassword: e.target.value });
+                                            if (errors.confirmPassword) {
+                                                setErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                                            }
+                                        }}
                                     />
+                                    {errors.confirmPassword && (
+                                        <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>
+                                    )}
                                     <button
                                         type="button"
                                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"

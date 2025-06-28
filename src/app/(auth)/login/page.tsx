@@ -6,6 +6,7 @@ import Link from 'next/link';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
 import { authAPI } from '@/lib/api';
 import { showToast } from '@/components/ui/Toast';
+import { loginSchema, type LoginInput } from '@/app/utils/validation';
 
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
@@ -16,11 +17,30 @@ export default function LoginPage() {
     const router = useRouter();
     const setToken = useAuthStore((state) => state.setToken);
     const setUser = useAuthStore((state) => state.setUser);
+    const [errors, setErrors] = useState<Partial<LoginInput>>({});
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const response = await authAPI.login(formData);
+            // Clear previous errors
+            setErrors({});
+
+            // Validate form data
+            const validatedData = loginSchema.safeParse(formData);
+
+            if (!validatedData.success) {
+                // Handle Zod validation errors
+                const validationErrors: Partial<LoginInput> = {};
+                validatedData.error.errors.forEach((err) => {
+                    const path = err.path[0];
+                    validationErrors[path as keyof LoginInput] = err.message;
+                });
+                setErrors(validationErrors);
+                showToast('Please fix the form errors', 'error');
+                return;
+            }
+
+            const response = await authAPI.login(validatedData.data);
             console.log(response, "response");
 
             // Access the nested data property from the response
@@ -43,31 +63,47 @@ export default function LoginPage() {
                 <div className="mx-auto">
                     <div className="max-w-md mx-auto px-8 py-6 bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg">
                         <h2 className="text-2xl font-semibold text-white mb-4">Login</h2>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleSubmit} noValidate>
                             <div className="mb-4">
                                 <label className="block text-white mb-1" htmlFor="email">Email Address</label>
                                 <input
-                                    className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300"
+                                    className={`w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 ${errors.email ? 'ring-2 ring-red-500' : 'focus:ring-blue-500'} transition duration-300`}
                                     placeholder="Enter your email"
                                     type="email"
                                     id="email"
                                     value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    required
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, email: e.target.value });
+                                        // Clear error when user starts typing
+                                        if (errors.email) {
+                                            setErrors(prev => ({ ...prev, email: undefined }));
+                                        }
+                                    }}
                                 />
+                                {errors.email && (
+                                    <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                                )}
                             </div>
                             <div className="mb-4">
                                 <label className="block text-white mb-1" htmlFor="password">Password</label>
                                 <div className="relative">
                                     <input
-                                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300"
+                                        className={`w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 ${errors.password ? 'ring-2 ring-red-500' : 'focus:ring-blue-500'} transition duration-300`}
                                         placeholder="Enter your password"
                                         type={showPassword ? "text" : "password"}
                                         id="password"
                                         value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        required
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, password: e.target.value });
+                                            // Clear error when user starts typing
+                                            if (errors.password) {
+                                                setErrors(prev => ({ ...prev, password: undefined }));
+                                            }
+                                        }}
                                     />
+                                    {errors.password && (
+                                        <p className="mt-1 text-sm text-red-500">{errors.password}</p>
+                                    )}
                                     <button
                                         type="button"
                                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
