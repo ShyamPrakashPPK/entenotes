@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/app/store/auth';
 import Link from 'next/link';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
+import { authAPI } from '@/lib/api';
+import { showToast } from '@/components/ui/Toast';
 
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
@@ -13,26 +15,24 @@ export default function LoginPage() {
     });
     const router = useRouter();
     const setToken = useAuthStore((state) => state.setToken);
+    const setUser = useAuthStore((state) => state.setUser);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await fetch('http://localhost:3052/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
-            });
+            const response = await authAPI.login(formData);
+            console.log(response, "response");
 
-            const data = await res.json();
-            if (res.ok) {
-                setToken(data.data.token);
-                router.push('/dashboard'); // Assume you'll create a dashboard
-            } else {
-                alert(data.message || 'Login failed');
-            }
-        } catch (error) {
-            console.error(error);
-            alert('Something went wrong.');
+            // Access the nested data property from the response
+            const { token, user } = response.data;
+
+            setToken(token);
+            setUser(user);
+            showToast('Login successful', 'success');
+            router.push('/dashboard');
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Login failed';
+            showToast(errorMessage, 'error');
         }
     };
 

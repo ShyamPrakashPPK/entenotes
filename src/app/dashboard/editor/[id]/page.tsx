@@ -7,7 +7,7 @@ import { getSocket } from '@/lib/socket';
 import SaveIndicator from '@/components/ui/SaveIndicator';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
 import { Editor } from '@/components/ui/Editor';
-
+import axiosInstance from '@/lib/axios';
 interface User {
     id: string;
     username: string;
@@ -40,13 +40,10 @@ export default function EditorPage() {
         const fetchNote = async () => {
             if (!token || !id) return;
             try {
-                const response = await fetch(`http://localhost:3052/api/notes/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (!response.ok) throw new Error('Failed to fetch note');
-                const data = await response.json();
-                setNote(data);
-                setContent(data.content);
+                const response = await axiosInstance.get<Note>(`/notes/${id}`);
+                console.log(response, "response");
+                setNote(response as unknown as Note);
+                setContent((response as unknown as Note).content || '');
             } catch (err) {
                 setError('Failed to load note');
                 console.error('Fetch error:', err);

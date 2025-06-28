@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuthStore } from '../store/auth';
+import { useAuthStore } from '../../app/store/auth';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import axiosInstance from '@/lib/axios';
 
 interface User {
     _id: string;
@@ -13,9 +14,13 @@ interface User {
 interface Note {
     _id: string;
     title: string;
-    updatedAt: string;
+    content: string;
     user: User;
     sharedWith: User[];
+    lastEditedBy: string;
+    lastEditedAt: string;
+    createdAt: string;
+    updatedAt: string;
     isOwner: boolean;
 }
 
@@ -32,16 +37,10 @@ export default function Sidebar() {
     useEffect(() => {
         const fetchNotes = async () => {
             if (!token) return;
-
             try {
-                const res = await fetch('http://localhost:3052/api/notes', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (!res.ok) throw new Error('Failed to fetch notes');
-                const data = await res.json();
-                setNotes(data);
+                const res = await axiosInstance.get('/notes');
+                const data = res;
+                setNotes(Array.isArray(data) ? data : []);
             } catch (err) {
                 setError('Failed to load notes');
                 console.error(err);
@@ -55,17 +54,8 @@ export default function Sidebar() {
 
     const handleDelete = async (noteId: string) => {
         if (!confirm('Are you sure you want to delete this note?')) return;
-
         try {
-            const res = await fetch(`http://localhost:3052/api/notes/${noteId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!res.ok) throw new Error('Failed to delete note');
-
+            await axiosInstance.delete(`/notes/${noteId}`);
             setNotes(notes => notes.filter(note => note._id !== noteId));
             router.push('/dashboard');
         } catch (err) {
@@ -82,23 +72,10 @@ export default function Sidebar() {
         }
 
         try {
-            const res = await fetch(`http://localhost:3052/api/notes/${noteId}/share`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ email: shareEmail.trim() })
+            const res = await axiosInstance.post(`/notes/${noteId}/share`, {
+                email: shareEmail.trim()
             });
 
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.message || 'Failed to share note');
-            }
-
-            const data = await res.json();
-
-            // Update the notes list with the new shared user
             setNotes(notes => notes.map(note => {
                 if (note._id === noteId) {
                     return {
@@ -112,15 +89,14 @@ export default function Sidebar() {
             setShareEmail('');
             setSharingNoteId(null);
             setShareError('');
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error sharing note:', err);
-            setShareError(err instanceof Error ? err.message : 'Failed to share note');
+            setShareError(err.response?.data?.message || 'Failed to share note');
         }
     };
 
     const renderNotesList = (notes: Note[], isShared: boolean) => {
         const filteredNotes = notes.filter(note => isShared ? !note.isOwner : note.isOwner);
-
         if (filteredNotes.length === 0) {
             return (
                 <div className="text-gray-400 text-center py-4">
@@ -141,7 +117,10 @@ export default function Sidebar() {
                     {isShared ? (
                         <span>Owned by: {note.user.email}</span>
                     ) : (
-                        <span>Last updated: {new Date(note.updatedAt).toLocaleDateString()}</span>
+                        <>
+                            <div>Last updated: {new Date(note.updatedAt).toLocaleDateString()}</div>
+                            <div>Last edited by: {note.user.email}</div>
+                        </>
                     )}
                 </div>
                 {note.isOwner && (

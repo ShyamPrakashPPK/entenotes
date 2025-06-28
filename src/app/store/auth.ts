@@ -1,32 +1,70 @@
 import { create } from 'zustand';
 
 interface User {
-    name: string;
+    _id: string;
+    username: string;
     email: string;
 }
 
 interface AuthState {
     token: string | null;
     user: User | null;
+    isAuthenticated: boolean;
     setToken: (token: string | null) => void;
     setUser: (user: User | null) => void;
-    isAuthenticated: boolean;
+    logout: () => void;
 }
 
+// Initialize state from localStorage
+const getInitialState = () => {
+    if (typeof window === 'undefined') {
+        return {
+            token: null,
+            user: null,
+            isAuthenticated: false
+        };
+    }
+
+    const token = localStorage.getItem('token');
+    let user = null;
+    try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            user = JSON.parse(userStr);
+        }
+    } catch (error) {
+        console.error('Error parsing user from localStorage:', error);
+        localStorage.removeItem('user');
+    }
+
+    return {
+        token,
+        user,
+        isAuthenticated: !!token
+    };
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
-    token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
-    user: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || 'null') : null,
+    ...getInitialState(),
     setToken: (token) => {
-        if (typeof window !== 'undefined') {
-            token ? localStorage.setItem('token', token) : localStorage.removeItem('token');
+        if (token) {
+            localStorage.setItem('token', token);
+        } else {
+            localStorage.removeItem('token');
         }
         set({ token, isAuthenticated: !!token });
     },
     setUser: (user) => {
-        if (typeof window !== 'undefined') {
-            user ? localStorage.setItem('user', JSON.stringify(user)) : localStorage.removeItem('user');
+        if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+        } else {
+            localStorage.removeItem('user');
         }
         set({ user });
     },
-    isAuthenticated: !!(typeof window !== 'undefined' && localStorage.getItem('token')),
+    logout: () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        set({ token: null, user: null, isAuthenticated: false });
+    }
 }));

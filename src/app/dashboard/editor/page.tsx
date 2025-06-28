@@ -5,103 +5,63 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/app/store/auth';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
 import { Editor } from '@/components/ui/Editor';
-import SaveIndicator from '@/components/ui/SaveIndicator';
-import { useAutoSave } from '@/hooks/use-auto-save';
-import { getSocket } from '@/lib/socket';
+import axiosInstance from '@/lib/axios';
+import { showToast } from '@/components/ui/Toast';
+
+interface Note {
+    _id: string;
+    title: string;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+}
 
 export default function NewNotePage() {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('<p>Start writing your note here...</p>');
     const [error, setError] = useState('');
-    const [noteId, setNoteId] = useState<string | null>(null);
     const token = useAuthStore((state) => state.token);
     const router = useRouter();
-    const socket = getSocket();
 
-    const handleSave = async (newContent: string) => {
-        if (!token) return;
-        if (!title.trim() && newContent === '<p>Start writing your note here...</p>') return;
-
-        try {
-            const method = noteId ? 'PUT' : 'POST';
-            const url = noteId
-                ? `http://localhost:3052/api/notes/${noteId}`
-                : 'http://localhost:3052/api/notes';
-
-            const res = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    title: title.trim() || 'Untitled Note',
-                    content: newContent.trim()
-                })
-            });
-
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.message || 'Failed to save note');
-            }
-
-            const savedNote = await res.json();
-
-            // Set the note ID if this was the first save
-            if (!noteId) {
-                setNoteId(savedNote._id);
-                // Connect to socket room after first save
-                socket.connect();
-                socket.emit('join-note', savedNote._id);
-            } else {
-                // Emit update for existing note
-                socket.emit('note-update', {
-                    noteId: savedNote._id,
-                    content: newContent
-                });
-            }
-
-            return savedNote;
-        } catch (error) {
-            console.error('Error saving note:', error);
-            throw error;
-        }
-    };
-
-    let handleChange = (newContent: string) => {
+    const handleChange = (newContent: string) => {
         setContent(newContent);
         setError('');
-    }
-
-    const { isSaving } = useAutoSave({
-        onSave: handleSave,
-        content,
-        delay: 2000
-    });
+    };
 
     const handlePublish = async () => {
+        if (!token) return;
+
         if (!title.trim()) {
-            setError('Please enter a title for your note');
+            showToast('Please enter a title for your note', 'error');
             return;
         }
 
         if (!content.trim() || content === '<p>Start writing your note here...</p>') {
-            setError('Please add some content to your note');
+            showToast('Please add some content to your note', 'error');
             return;
         }
 
         try {
-            const savedNote = await handleSave(content);
-            if (savedNote) {
+            const payload = {
+                title: title.trim() || 'Untitled Note',
+                content: content.trim()
+            };
+
+            const response = await axiosInstance.post<Note>('/notes', payload);
+            const savedNote = response as unknown as Note;
+
+            if (savedNote._id) {
+                showToast('Note published successfully', 'success');
                 router.push('/dashboard');
             }
-        } catch (error) {
-            setError(error instanceof Error ? error.message : 'Failed to save note. Please try again.');
+        } catch (error: any) {
+            console.error('Error publishing note:', error);
+            showToast(error.response?.data?.message || 'Failed to publish note', 'error');
         }
     };
 
     return (
-        <div className="min-h-screen ">
+        <div className="min-h-screen">
             <BackgroundGradient />
             <div className="mx-auto max-w-4xl px-6 py-8">
                 <div className="flex flex-col gap-4 mb-8">
@@ -117,7 +77,6 @@ export default function NewNotePage() {
                             className="bg-transparent text-2xl font-semibold text-white border-none outline-none placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 rounded-lg px-2 py-1 w-full max-w-md"
                         />
                         <div className="flex items-center gap-3">
-                            <SaveIndicator isSaving={isSaving} />
                             <button
                                 onClick={() => router.push('/dashboard')}
                                 className="px-3 py-1.5 text-sm text-gray-300 hover:text-white transition-colors"

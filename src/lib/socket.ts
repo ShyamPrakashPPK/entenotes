@@ -8,16 +8,17 @@ export const getSocket = () => {
 
         console.log('Initializing socket connection with token:', token ? 'present' : 'missing');
 
-        socket = io('http://localhost:3052', {
+        socket = io('ws://localhost:3052', {
             auth: {
                 token
             },
             withCredentials: true,
-            transports: ['websocket', 'polling'],
-            autoConnect: false, // We'll connect manually when needed
-            reconnection: true, // Enable reconnection
-            reconnectionAttempts: 5,
+            transports: ['websocket'],
+            autoConnect: false,
+            reconnection: true,
+            reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
+            timeout: 20000,
         });
 
         // Handle connection events

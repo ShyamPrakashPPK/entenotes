@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/auth';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
 import Link from 'next/link';
+import axiosInstance from '@/lib/axios';
 
 interface Stats {
     totalNotes: number;
@@ -19,18 +20,10 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchStats = async () => {
             if (!token) return;
-
             try {
-                const res = await fetch('http://localhost:3052/api/notes/stats', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!res.ok) throw new Error('Failed to fetch stats');
-
-                const data = await res.json();
-                setStats(data);
+                const response = await axiosInstance.get<Stats>('/notes/stats');
+                console.log(response);
+                setStats(response as unknown as Stats);
             } catch (err) {
                 console.error('Error fetching stats:', err);
                 setError('Failed to load statistics');
@@ -42,9 +35,11 @@ export default function DashboardPage() {
         fetchStats();
     }, [token]);
 
+    console.log(stats, "stats");
+
     return (
         <div className="min-h-screen relative isolate">
-            
+
             <BackgroundGradient />
             <div className="mx-auto max-w-7xl px-6 py-8">
                 <div className="flex justify-between items-center mb-8">

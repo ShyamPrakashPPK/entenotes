@@ -1,9 +1,9 @@
 "use client"
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/app/store/auth';
 import Link from 'next/link';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
+import { authAPI } from '@/lib/api';
 
 export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
@@ -15,7 +15,6 @@ export default function RegisterPage() {
         confirmPassword: ''
     });
     const router = useRouter();
-    const setToken = useAuthStore((state) => state.setToken);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -31,23 +30,11 @@ export default function RegisterPage() {
         };
 
         try {
-            const res = await fetch('http://localhost:3052/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                alert('Registration successful. Please login.');
-                router.push('/login');
-            } else {
-                // Show the specific error message from the backend
-                alert(data.message || 'Registration failed. Please try again.');
-            }
-        } catch (error) {
-            console.error('Registration error:', error);
-            alert('Network error or server is not responding. Please try again later.');
+            await authAPI.register(payload);
+            alert('Registration successful. Please login.');
+            router.push('/login');
+        } catch (error: any) {
+            alert(error.message || 'Registration failed');
         }
     };
 

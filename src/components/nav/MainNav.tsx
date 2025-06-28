@@ -1,24 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import MobileNav from './MobileNav';
+import { useAuthStore } from '@/app/store/auth';
+import { showToast } from '@/components/ui/Toast';
 
 export default function MainNav() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const { isAuthenticated, logout } = useAuthStore();
     const pathname = usePathname();
-
-    useEffect(() => {
-        // Check if user is logged in by looking for token in localStorage
-        const token = localStorage.getItem('token');
-        setIsLoggedIn(!!token);
-    }, []);
+    const router = useRouter();
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        setIsLoggedIn(false);
+        logout();
+        showToast('Logged out successfully', 'success');
+        router.push('/login');
     };
 
     return (
@@ -32,10 +29,10 @@ export default function MainNav() {
                     </Link>
                 </div>
 
-                <MobileNav isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+                <MobileNav isLoggedIn={isAuthenticated} onLogout={handleLogout} />
 
-                <div className="hidden lg:flex lg:items-center lg:space-x-8 flex-grow justify-center">
-                    {isLoggedIn ? (
+                <div className="hidden lg:flex lg:gap-x-12">
+                    {isAuthenticated ? (
                         <>
                             <Link href="/dashboard" className="text-sm font-semibold text-white hover:text-gray-300">
                                 Dashboard
@@ -62,8 +59,8 @@ export default function MainNav() {
                     )}
                 </div>
 
-                <div className="hidden lg:flex lg:items-center">
-                    {isLoggedIn ? (
+                <div className="hidden lg:flex lg:flex-1 lg:justify-end">
+                    {isAuthenticated ? (
                         <button
                             onClick={handleLogout}
                             className="text-sm font-semibold text-white hover:text-gray-300"

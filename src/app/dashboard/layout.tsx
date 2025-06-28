@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../store/auth';
-import Sidebar from './sidebar';
+import Sidebar from '../../components/nav/sidebar';
+import { showToast } from '@/components/ui/Toast';
 
 export default function DashboardLayout({
     children,
@@ -11,27 +12,28 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const [mounted, setMounted] = useState(false);
-    const token = useAuthStore((state) => state.token);
+    const { token, isAuthenticated } = useAuthStore();
     const router = useRouter();
 
     useEffect(() => {
         setMounted(true);
-        if (!token) {
-            router.push('/login');
+        if (!isAuthenticated) {
+            showToast('Please login to access the dashboard', 'error');
+            router.replace('/login');
         }
-    }, [token, router]);
+    }, [isAuthenticated, router]);
 
     // Don't render anything until after hydration
     if (!mounted) {
         return null;
     }
 
-    if (!token) {
+    if (!isAuthenticated) {
         return null;
     }
 
     return (
-        <div className="flex min-h-screen ">
+        <div className="flex min-h-screen">
             <Sidebar />
             <main className="flex-1 overflow-auto">
                 {children}
