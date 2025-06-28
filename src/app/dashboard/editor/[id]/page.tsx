@@ -6,10 +6,11 @@ import { useAuthStore } from '@/app/store/auth';
 import { getSocket } from '@/lib/socket';
 import SaveIndicator from '@/components/ui/SaveIndicator';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
-import { Editor } from '@/components/ui/Editor';
+import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
 import axiosInstance from '@/lib/axios';
 
 interface User {
+    email: any;
     id: string;
     username: string;
 }
@@ -56,22 +57,14 @@ export default function EditorPage() {
     // Socket setup
     useEffect(() => {
         if (!socket || !id) return;
-
-        // Connect socket
         socket.connect();
-
-        // Join room
         socket.emit('note:join', { noteId: id });
-
-        // Listen for updates
         socket.on('note:updated', (data) => {
             console.log('Received update:', data);
             if (data.userId !== socket.id) {
                 setContent(data.content);
             }
         });
-
-        // Listen for active users
         socket.on('note:users', (users) => {
             console.log('Active users:', users);
             setActiveUsers(users);
@@ -88,19 +81,13 @@ export default function EditorPage() {
 
     const handleChange = async (newContent: string) => {
         setContent(newContent);
-
-        // Emit to socket immediately
         if (socket && socket.connected) {
             socket.emit('note:update', {
                 noteId: id,
                 content: newContent
             });
         }
-
-        // Clear existing timeout
         if (saveTimeout) clearTimeout(saveTimeout);
-
-        // Set new timeout for saving
         setIsSaving(true);
         saveTimeout = setTimeout(async () => {
             try {
@@ -147,12 +134,10 @@ export default function EditorPage() {
         <div className="min-h-screen">
             <BackgroundGradient />
             <div className="mx-auto max-w-4xl px-6 py-8">
-                {/* Header */}
                 <div className="flex flex-col gap-4 mb-8">
                     <div className="flex items-center justify-between">
                         <h1 className="text-2xl font-semibold text-white">{note.title}</h1>
                         <div className="flex items-center gap-4">
-                            {/* Active users */}
                             {activeUsers.length > 0 && (
                                 <div className="flex items-center gap-2">
                                     <div className="flex -space-x-2">
@@ -174,15 +159,13 @@ export default function EditorPage() {
                             <SaveIndicator isSaving={isSaving} />
                         </div>
                     </div>
-
-                    {/* Note info */}
                     <div className="flex flex-wrap gap-2 text-sm text-gray-400">
-                        <span>Owner: {note.user.username}</span>
+                        <span>Owner: {note.user.email}</span>
                         {note.sharedWith.length > 0 && (
                             <>
                                 <span>•</span>
                                 <span>
-                                    Shared with: {note.sharedWith.map(user => user.username).join(', ')}
+                                    Shared with: {note.sharedWith.map(user => user.email).join(', ')}
                                 </span>
                             </>
                         )}
@@ -197,13 +180,12 @@ export default function EditorPage() {
                         )}
                     </div>
                 </div>
-
-                {/* Editor */}
                 <div className="bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-xl overflow-hidden border border-gray-700">
-                    <Editor
+                    <MarkdownEditor
                         value={content}
                         onChange={handleChange}
-                        placeholder="Start writing here..."
+                        placeholder="Start writing your markdown note here..."
+                        height={600}
                     />
                 </div>
             </div>

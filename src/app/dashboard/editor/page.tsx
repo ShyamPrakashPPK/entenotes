@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/app/store/auth';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
-import { Editor } from '@/components/ui/Editor';
+import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
 import axiosInstance from '@/lib/axios';
 import { showToast } from '@/components/ui/Toast';
 
@@ -18,7 +18,7 @@ interface Note {
 
 export default function NewNotePage() {
     const [title, setTitle] = useState('');
-    const [content, setContent] = useState('<p>Start writing your note here...</p>');
+    const [content, setContent] = useState('# Welcome to your new note!\n\nStart writing your markdown content here...\n\n## Features\n- **Bold text**\n- *Italic text*\n- Lists\n- Code blocks\n- And much more!');
     const [error, setError] = useState('');
     const token = useAuthStore((state) => state.token);
     const router = useRouter();
@@ -36,7 +36,7 @@ export default function NewNotePage() {
             return;
         }
 
-        if (!content.trim() || content === '<p>Start writing your note here...</p>') {
+        if (!content.trim() || content === '# Welcome to your new note!\n\nStart writing your markdown content here...\n\n## Features\n- **Bold text**\n- *Italic text*\n- Lists\n- Code blocks\n- And much more!') {
             showToast('Please add some content to your note', 'error');
             return;
         }
@@ -99,10 +99,11 @@ export default function NewNotePage() {
                 </div>
 
                 <div className="bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-xl overflow-hidden">
-                    <Editor
+                    <MarkdownEditor
                         value={content}
                         onChange={handleChange}
-                        placeholder="Start writing here..."
+                        placeholder="Start writing your markdown note here..."
+                        height={600}
                     />
                 </div>
             </div>
