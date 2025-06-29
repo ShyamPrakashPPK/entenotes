@@ -1,6 +1,7 @@
 "use client"
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/app/store/auth';
 import Link from 'next/link';
 import BackgroundGradient from '@/components/ui/BackgroundGradient';
 import { authAPI } from '@/lib/api';
@@ -18,18 +19,22 @@ export default function RegisterPage() {
     });
     const [errors, setErrors] = useState<Partial<RegisterInput>>({});
     const router = useRouter();
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push('/dashboard');
+        }
+    }, [isAuthenticated, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            // Clear previous errors
             setErrors({});
 
-            // Validate form data
             const validatedData = registerSchema.safeParse(formData);
 
-            if (!validatedData.success) {
-                // Handle Zod validation errors
+            if (!validatedData.success) {   
                 const validationErrors: Partial<RegisterInput> = {};
                 validatedData.error.errors.forEach((err) => {
                     const path = err.path[0];

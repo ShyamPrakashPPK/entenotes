@@ -14,6 +14,7 @@ export interface RegisterPayload {
 
 export interface ShareNotePayload {
     email: string;
+    permission?: 'view' | 'edit';
 }
 
 // Auth API

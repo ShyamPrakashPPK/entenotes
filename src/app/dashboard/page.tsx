@@ -11,12 +11,18 @@ interface User {
     email: string;
 }
 
+interface SharedUser {
+    user: User;
+    permission: 'view' | 'edit';
+    _id: string;
+}
+
 interface Note {
     _id: string;
     title: string;
     content: string;
     user: User;
-    sharedWith: User[];
+    sharedWith: SharedUser[];
     lastEditedBy: User;
     lastEditedAt: string;
     createdAt: string;
@@ -52,6 +58,10 @@ export default function DashboardPage() {
     const [shareEmail, setShareEmail] = useState('');
     const [sharingNoteId, setSharingNoteId] = useState<string | null>(null);
     const [shareError, setShareError] = useState('');
+    const [sharePermission, setSharePermission] = useState('view');
+    const [managingNoteId, setManagingNoteId] = useState<string | null>(null);
+    const [editingShareId, setEditingShareId] = useState<string | null>(null);
+    const [editingPermission, setEditingPermission] = useState<string>('');
     const [sortBy, setSortBy] = useState('updatedAt');
     const [sortOrder, setSortOrder] = useState('desc');
     const [currentPage, setCurrentPage] = useState(1);
@@ -104,14 +114,12 @@ export default function DashboardPage() {
         fetchData();
     }, [token]);
 
-    // Handle search with debounce
     useEffect(() => {
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
-
         const timeout = setTimeout(() => {
-            setCurrentPage(1); // Reset to first page when search changes
+            setCurrentPage(1);
             fetchNotes(1);
         }, 300);
 
@@ -124,9 +132,8 @@ export default function DashboardPage() {
         };
     }, [searchQuery]);
 
-    // Handle filter and sort changes
     useEffect(() => {
-        setCurrentPage(1); // Reset to first page when filter or sort changes
+        setCurrentPage(1);
         fetchNotes(1);
     }, [filterType, sortBy, sortOrder]);
 
@@ -139,8 +146,7 @@ export default function DashboardPage() {
         if (!confirm('Are you sure you want to delete this note?')) return;
         try {
             await axiosInstance.delete(`/notes/${noteId}`);
-            await fetchNotes(); // Refresh the current page
-            // Refresh stats after deletion
+            await fetchNotes();
             const statsResponse = await axiosInstance.get<Stats>('/notes/stats');
             setStats(statsResponse as unknown as Stats);
         } catch (err) {
@@ -158,16 +164,48 @@ export default function DashboardPage() {
 
         try {
             await axiosInstance.post(`/notes/${noteId}/share`, {
-                email: shareEmail.trim()
+                email: shareEmail.trim(),
+                permission: sharePermission
             });
 
-            await fetchNotes(); // Refresh the current page
+            await fetchNotes();
             setShareEmail('');
             setSharingNoteId(null);
             setShareError('');
+            setSharePermission('view');
+            setManagingNoteId(null);
+            setEditingShareId(null);
+            setEditingPermission('');
         } catch (err: any) {
             console.error('Error sharing note:', err);
             setShareError(err.response?.data?.message || 'Failed to share note');
+        }
+    };
+
+    const handleUpdatePermission = async (noteId: string, shareId: string, newPermission: string) => {
+        try {
+            await axiosInstance.put(`/notes/${noteId}/share/${shareId}`, {
+                permission: newPermission
+            });
+
+            await fetchNotes();
+            setEditingShareId(null);
+            setEditingPermission('');
+        } catch (err: any) {
+            console.error('Error updating permission:', err);
+            alert(err.response?.data?.message || 'Failed to update permission');
+        }
+    };
+
+    const handleRemoveSharedUser = async (noteId: string, shareId: string) => {
+        if (!confirm('Are you sure you want to remove this user from sharing?')) return;
+
+        try {
+            await axiosInstance.delete(`/notes/${noteId}/share/${shareId}`);
+            await fetchNotes();
+        } catch (err: any) {
+            console.error('Error removing shared user:', err);
+            alert(err.response?.data?.message || 'Failed to remove shared user');
         }
     };
 
@@ -179,7 +217,7 @@ export default function DashboardPage() {
                     <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
                     <Link
                         href="/dashboard/editor"
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
                     >
                         Create New Note
                     </Link>
@@ -278,13 +316,102 @@ export default function DashboardPage() {
                                             <div>Owned by: {note.user.email}</div>
                                         )}
                                     </div>
+
+                                    {/* Sharing Info Section */}
+                                    {note.isOwner && note.sharedWith.length > 0 && (
+                                        <div className="border-t border-gray-700 pt-3">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="text-sm font-medium text-gray-300">Shared with ({note.sharedWith.length})</h4>
+                                                <button
+                                                    onClick={() => setManagingNoteId(managingNoteId === note._id ? null : note._id)}
+                                                    className="text-xs text-indigo-400 hover:text-indigo-300"
+                                                >
+                                                    {managingNoteId === note._id ? 'Hide' : 'Manage'}
+                                                </button>
+                                            </div>
+
+                                            {managingNoteId === note._id ? (
+                                                <div className="space-y-2">
+                                                    {note.sharedWith.map((share) => (
+                                                        <div key={share._id} className="flex items-center justify-between bg-gray-700/30 rounded p-2">
+                                                            <div className="flex-1">
+                                                                <div className="text-xs text-gray-300">{share.user.email}</div>
+                                                                {editingShareId === share._id ? (
+                                                                    <select
+                                                                        value={editingPermission}
+                                                                        onChange={(e) => setEditingPermission(e.target.value)}
+                                                                        className="text-xs bg-gray-600 text-white rounded px-1 py-0.5 mt-1"
+                                                                    >
+                                                                        <option value="view">View Only</option>
+                                                                        <option value="edit">Edit</option>
+                                                                    </select>
+                                                                ) : (
+                                                                    <div className={`text-xs px-1.5 py-0.5 rounded mt-1 inline-block ${share.permission === 'edit'
+                                                                        ? 'bg-blue-500/20 text-blue-400'
+                                                                        : 'bg-gray-500/20 text-gray-400'
+                                                                        }`}>
+                                                                        {share.permission === 'edit' ? 'Can Edit' : 'View Only'}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex gap-1">
+                                                                {editingShareId === share._id ? (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => handleUpdatePermission(note._id, share._id, editingPermission)}
+                                                                            className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                                                                        >
+                                                                            Save
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setEditingShareId(null);
+                                                                                setEditingPermission('');
+                                                                            }}
+                                                                            className="text-xs px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700"
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setEditingShareId(share._id);
+                                                                                setEditingPermission(share.permission);
+                                                                            }}
+                                                                            className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                                                        >
+                                                                            Edit
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleRemoveSharedUser(note._id, share._id)}
+                                                                            className="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                                                                        >
+                                                                            Remove
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs text-gray-400">
+                                                    {note.sharedWith.map(share => share.user.email).join(', ')}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Action Buttons */}
                                     {note.isOwner && (
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => setSharingNoteId(note._id)}
                                                 className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                                             >
-                                                Share
+                                                {note.sharedWith.length > 0 ? 'Add More' : 'Share'}
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(note._id)}
@@ -294,8 +421,11 @@ export default function DashboardPage() {
                                             </button>
                                         </div>
                                     )}
+
+                                    {/* New Sharing Form */}
                                     {sharingNoteId === note._id && (
-                                        <div className="space-y-2">
+                                        <div className="border-t border-gray-700 pt-3 space-y-2">
+                                            <h4 className="text-sm font-medium text-gray-300">Share with new user</h4>
                                             <input
                                                 type="email"
                                                 placeholder="Enter email to share"
@@ -306,6 +436,14 @@ export default function DashboardPage() {
                                                 }}
                                                 className="w-full px-3 py-2 text-sm bg-gray-700 text-white rounded border border-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                                             />
+                                            <select
+                                                value={sharePermission}
+                                                onChange={(e) => setSharePermission(e.target.value)}
+                                                className="w-full px-3 py-2 text-sm bg-gray-700 text-white rounded border border-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                            >
+                                                <option value="view">View Only</option>
+                                                <option value="edit">Edit</option>
+                                            </select>
                                             {shareError && (
                                                 <div className="text-sm text-red-400">{shareError}</div>
                                             )}
@@ -314,13 +452,17 @@ export default function DashboardPage() {
                                                     onClick={() => handleShare(note._id)}
                                                     className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
                                                 >
-                                                    Send
+                                                    Share
                                                 </button>
                                                 <button
                                                     onClick={() => {
                                                         setSharingNoteId(null);
                                                         setShareEmail('');
                                                         setShareError('');
+                                                        setSharePermission('view');
+                                                        setManagingNoteId(null);
+                                                        setEditingShareId(null);
+                                                        setEditingPermission('');
                                                     }}
                                                     className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
                                                 >

@@ -8,10 +8,9 @@ import { useAuthStore } from '@/app/store/auth';
 import { showToast } from '@/components/ui/Toast';
 
 export default function MainNav() {
-    const { isAuthenticated, logout } = useAuthStore();
+    const { isAuthenticated, user, logout } = useAuthStore();
     const pathname = usePathname();
     const router = useRouter();
-
     const handleLogout = () => {
         logout();
         showToast('Logged out successfully', 'success');
@@ -29,7 +28,7 @@ export default function MainNav() {
                     </Link>
                 </div>
 
-                <MobileNav isLoggedIn={isAuthenticated} onLogout={handleLogout} />
+                <MobileNav isLoggedIn={isAuthenticated} user={user} onLogout={handleLogout} />
 
                 <div className="hidden lg:flex lg:gap-x-12 absolute left-1/2 transform -translate-x-1/2">
                     {isAuthenticated ? (
@@ -46,7 +45,7 @@ export default function MainNav() {
                             <Link href="/features" className="text-sm font-semibold text-white hover:text-gray-300">
                                 Features
                             </Link>
-                         
+
                             <Link href="/about" className="text-sm font-semibold text-white hover:text-gray-300">
                                 About
                             </Link>
@@ -54,14 +53,21 @@ export default function MainNav() {
                     )}
                 </div>
 
-                <div className="hidden lg:flex lg:flex-1 lg:justify-end">
+                <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:items-center">
                     {isAuthenticated ? (
-                        <button
-                            onClick={handleLogout}
-                            className="text-sm font-semibold text-white hover:text-gray-300"
-                        >
-                            Log out <span aria-hidden="true">&rarr;</span>
-                        </button>
+                        <div className="flex flex-col items-end gap-1">
+                            {user && (
+                                <div className="text-sm text-gray-300">
+                                    Welcome, <span className="font-semibold text-white">{user?.username} ({user?.email})</span>
+                                </div>
+                            )}
+                            <button
+                                onClick={handleLogout}
+                                className="text-sm font-semibold text-white hover:text-gray-300"
+                            >
+                                Log out <span aria-hidden="true">&rarr;</span>
+                            </button>
+                        </div>
                     ) : (
                         pathname !== '/login' && pathname !== '/register' && (
                             <Link href="/login" className="text-sm font-semibold text-white hover:text-gray-300">

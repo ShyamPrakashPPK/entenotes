@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/app/store/auth';
 import Link from 'next/link';
@@ -17,19 +17,23 @@ export default function LoginPage() {
     const router = useRouter();
     const setToken = useAuthStore((state) => state.setToken);
     const setUser = useAuthStore((state) => state.setUser);
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const [errors, setErrors] = useState<Partial<LoginInput>>({});
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push('/dashboard');
+        }
+    }, [isAuthenticated, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            // Clear previous errors
             setErrors({});
 
-            // Validate form data
             const validatedData = loginSchema.safeParse(formData);
 
             if (!validatedData.success) {
-                // Handle Zod validation errors
                 const validationErrors: Partial<LoginInput> = {};
                 validatedData.error.errors.forEach((err) => {
                     const path = err.path[0];
@@ -43,7 +47,6 @@ export default function LoginPage() {
             const response = await authAPI.login(validatedData.data);
             console.log(response, "response");
 
-            // Access the nested data property from the response
             const { token, user } = response.data;
 
             setToken(token);
@@ -74,7 +77,6 @@ export default function LoginPage() {
                                     value={formData.email}
                                     onChange={(e) => {
                                         setFormData({ ...formData, email: e.target.value });
-                                        // Clear error when user starts typing
                                         if (errors.email) {
                                             setErrors(prev => ({ ...prev, email: undefined }));
                                         }
@@ -94,8 +96,7 @@ export default function LoginPage() {
                                         id="password"
                                         value={formData.password}
                                         onChange={(e) => {
-                                            setFormData({ ...formData, password: e.target.value });
-                                            // Clear error when user starts typing
+                                            setFormData({ ...formData, password: e.target.value });     
                                             if (errors.password) {
                                                 setErrors(prev => ({ ...prev, password: undefined }));
                                             }

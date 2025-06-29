@@ -11,12 +11,18 @@ interface User {
     email: string;
 }
 
+interface SharedUser {
+    user: User;
+    permission: 'view' | 'edit';
+    _id: string;
+}
+
 interface Note {
     _id: string;
     title: string;
     content: string;
     user: User;
-    sharedWith: User[];
+    sharedWith: SharedUser[];
     lastEditedBy: string;
     lastEditedAt: string;
     createdAt: string;
@@ -34,21 +40,21 @@ export default function Sidebar() {
     const token = useAuthStore((state) => state.token);
     const router = useRouter();
 
-    useEffect(() => {
-        const fetchNotes = async () => {
-            if (!token) return;
-            try {
-                const res = await axiosInstance.get('/notes');
-                const data = res;
-                setNotes(Array.isArray(data) ? data : []);
-            } catch (err) {
-                setError('Failed to load notes');
-                console.error(err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    const fetchNotes = async () => {
+        if (!token) return;
+        try {
+            const res = await axiosInstance.get('/notes');
+            const data = res;
+            setNotes(Array.isArray(data) ? data : []);
+        } catch (err) {
+            setError('Failed to load notes');
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchNotes();
     }, [token]);
 
@@ -76,15 +82,8 @@ export default function Sidebar() {
                 email: shareEmail.trim()
             });
 
-            setNotes(notes => notes.map(note => {
-                if (note._id === noteId) {
-                    return {
-                        ...note,
-                        sharedWith: [...note.sharedWith, { email: shareEmail.trim() } as User]
-                    };
-                }
-                return note;
-            }));
+            // Refetch notes to get the updated sharedWith structure
+            fetchNotes();
 
             setShareEmail('');
             setSharingNoteId(null);

@@ -4,12 +4,19 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
+interface User {
+    _id: string;
+    username: string;
+    email: string;
+}
+
 interface MobileNavProps {
     isLoggedIn: boolean;
+    user: User | null;
     onLogout: () => void;
 }
 
-export default function MobileNav({ isLoggedIn, onLogout }: MobileNavProps) {
+export default function MobileNav({ isLoggedIn, user, onLogout }: MobileNavProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -105,15 +112,23 @@ export default function MobileNav({ isLoggedIn, onLogout }: MobileNavProps) {
                                 </div>
                                 <div className="py-6">
                                     {isLoggedIn ? (
-                                        <button
-                                            onClick={() => {
-                                                onLogout();
-                                                setIsOpen(false);
-                                            }}
-                                            className="block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-white hover:bg-gray-700"
-                                        >
-                                            Log out
-                                        </button>
+                                        <>
+                                            {user && (
+                                                <div className="px-3 py-2 mb-3 border-b border-gray-700">
+                                                    <div className="text-sm text-gray-300">Welcome,</div>
+                                                    <div className="text-base font-semibold text-white">{user.username || user.email}</div>
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    onLogout();
+                                                    setIsOpen(false);
+                                                }}
+                                                className="block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-white hover:bg-gray-700"
+                                            >
+                                                Log out
+                                            </button>
+                                        </>
                                     ) : (
                                         <Link
                                             href="/login"
