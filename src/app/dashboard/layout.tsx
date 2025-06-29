@@ -22,7 +22,6 @@ export default function DashboardLayout({
         }
     }, [isAuthenticated, router]);
 
-    // Don't render anything until after hydration
     if (!mounted) {
         return null;
     }
